@@ -1,0 +1,14 @@
+[package]
+name = "marks"
+version = "0.1.0"
+authors = ["Isa Mert Gurbuz <isamert@protonmail.com>"]
+edition = "2018"
+
+[dependencies]
+clap = "2"
+rayon = "1.5"
+regex = "1"
+walkdir = "2"
+lazy_static = "1.4"
+fuzzy-matcher = "*"
+sublime_fuzzy = "0.6"

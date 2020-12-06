@@ -1,0 +1,2 @@
+* marks
+A simple and /hopefully/ fast semantic search tool for org/markdown files. WIP.
