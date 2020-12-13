@@ -72,11 +72,15 @@ impl<'a> SearchResult<'a> {
         t.fg(term::color::WHITE).unwrap();
         write!(t, ":").unwrap();
 
+        let mut sep = "";
         for header in self.headers.iter() {
+            t.fg(term::color::WHITE).unwrap();
+            write!(t, "{}", sep).unwrap();
+
+            sep = &self.args.header_seperator;
+
             t.fg(term::color::BLUE).unwrap();
             write!(t, "{}", header.content).unwrap();
-            t.fg(term::color::WHITE).unwrap();
-            write!(t, "/").unwrap();
         }
 
         t.fg(term::color::WHITE).unwrap();
@@ -99,9 +103,9 @@ impl fmt::Display for SearchResult<'_> {
         if !self.args.no_headers {
             let headers = self.headers
                 .iter()
-                .map(|it| it.content.clone())
-                .fold_first(|acc, it| format!("{}{}{}", acc, self.args.header_seperator, it))
-                .unwrap_or(String::new());
+                .map(|x| x.content.to_string())
+                .collect::<Vec<_>>()
+                .join(&self.args.header_seperator);
 
             write!(f, ":{}", headers);
         }
