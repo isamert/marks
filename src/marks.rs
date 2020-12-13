@@ -15,8 +15,6 @@ use crate::utils::file_utils;
 use crate::result::{Header, SearchResult};
 
 lazy_static! {
-    static ref HEADER_REGEX_MD:  Regex = Regex::new(r"^#+ ").unwrap();
-    static ref HEADER_REGEX_ORG: Regex = Regex::new(r"^\*+ ").unwrap();
     static ref BLACKLIST: Vec<&'static str> = vec!["node_modules"];
 }
 
@@ -24,6 +22,11 @@ pub struct Marks<'a> {
     pub args: &'a Args,
     pub query: Query,
     pub matcher: SkimMatcherV2,
+}
+
+enum DocType {
+    Markdown,
+    OrgMode,
 }
 
 impl<'a> Marks<'a> {
@@ -56,7 +59,7 @@ impl<'a> Marks<'a> {
 
     pub fn search_file(&self, file: &DirEntry) -> Option<Vec<SearchResult>> {
         let filename = file.file_name().to_str()?;
-        let header_regex = self.header_regex(file);
+        let doc_type = self.get_doc_type(&file);
 
         let mut results = vec![];
         let reader = BufReader::new(File::open(file.path()).ok()?);
@@ -64,18 +67,13 @@ impl<'a> Marks<'a> {
         let mut last_depth = 0;
         for (index, line) in reader.lines().enumerate() {
             let line = line.unwrap();
-            let is_header = header_regex.is_match(&line);
+            let header_info = self.parse_header(&doc_type, &line);
+            let is_header = header_info.is_some();
 
-            if is_header {
-                let info: Vec<&str> = line.splitn(2, ' ').collect();
-                if info.len() != 2 {
-                    continue
-                }
-
-                let depth = info[0].len();
+            if let Some((depth, header_content)) = header_info {
                 let header = Header {
                     depth,
-                    content: info[1].to_string(),
+                    content: header_content,
                     line: index + 1,
                     properties: HashMap::new(),
                     tags: vec![],
@@ -157,11 +155,37 @@ impl<'a> Marks<'a> {
         }
     }
 
-    fn header_regex(&self, file: &DirEntry) -> &Regex {
+    fn get_doc_type(&self, file: &DirEntry) -> DocType {
         if self.is_md_file(file) {
-            &HEADER_REGEX_MD
+            return DocType::Markdown;
         } else {
-            &HEADER_REGEX_ORG
+            return DocType::OrgMode;
         }
+    }
+
+    fn parse_header(&self, typ: &DocType, line: &str) -> Option<(usize, String)> {
+        let x = match typ {
+            DocType::Markdown => '#',
+            DocType::OrgMode => '*',
+        };
+
+        let mut chars = line.chars();
+        if chars.next() != Some(x) {
+            return None;
+        }
+
+        let mut depth: usize = 1;
+        for chr in &mut chars {
+            if chr == x {
+                depth += 1;
+                continue;
+            } else if chr == ' ' {
+                break;
+            } else {
+                return None;
+            }
+        }
+
+        return Some((depth, chars.collect()));
     }
 }
