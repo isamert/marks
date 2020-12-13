@@ -13,14 +13,15 @@ pub enum QueryToken {
 
 #[derive(Debug)]
 pub struct Query {
+    /// Query string that user provided.
     pub full: String,
-    // "keyword"
+    /// "keyword"
     pub musts: Vec<String>,
-    // -keyword
+    /// -keyword
     pub nones: Vec<String>,
-    // TODO regex:
+    /// `(some|regex)`
     pub regexes: Vec<Regex>,
-    // splitted fuzzy searches
+    /// full - (musts + nones + regexes). Used for fuzzy searching.
     pub rest: Vec<String>,
 }
 
