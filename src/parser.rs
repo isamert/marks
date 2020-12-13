@@ -63,7 +63,7 @@ where I: Iterator<Item = char> {
 
 pub fn parse_plain<I>(iter: &mut Peekable<I>) -> Option<String>
 where I: Iterator<Item = char> {
-    if let Some(&x) = iter.peek() {
+    if let Some(&_x) = iter.peek() {
         let value = iter.take_until(|c| *c != ' ').collect();
         parse_whitespace(iter);
 

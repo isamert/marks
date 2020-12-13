@@ -12,3 +12,6 @@ walkdir = "2"
 lazy_static = "1.4"
 fuzzy-matcher = "*"
 sublime_fuzzy = "0.6"
+structopt = { version = "0.3", features = [ "paw" ] }
+paw = "1.0"
+term = "*"
