@@ -30,11 +30,6 @@ impl<'a> Header<'a> {
             args,
         }
     }
-
-    /// Concatenate given headers into single string with given seperator.
-    pub fn concat(headers: &Vec<Header>, sep: &str) -> String {
-        headers.iter().map(|x| x.content.to_owned()).collect::<Vec<_>>().join(sep)
-    }
 }
 
 #[derive(Debug)]

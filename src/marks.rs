@@ -12,9 +12,11 @@ use rayon::prelude::*;
 use crate::args::Args;
 use crate::query::Query;
 use crate::utils::file_utils;
+use crate::parser::GentleIterator;
 use crate::result::{Header, SearchResult};
 
 lazy_static! {
+    // TODO: make it extendable
     static ref BLACKLIST: Vec<&'static str> = vec!["node_modules"];
 }
 
@@ -61,10 +63,12 @@ impl<'a> Marks<'a> {
         let filename = file.file_name().to_str()?;
         let doc_type = self.get_doc_type(&file);
 
-        let mut results = vec![];
         let reader = BufReader::new(File::open(file.path()).ok()?);
+        let mut results = vec![];
+
         let mut headers: Vec<Header> = vec![];
         let mut last_depth = 0;
+
         for (index, line) in reader.lines().enumerate() {
             let line = line.unwrap();
             let header_info = self.parse_header(&doc_type, &line);
@@ -86,14 +90,19 @@ impl<'a> Marks<'a> {
                     let lastn = headers.len() - 1;
                     headers[lastn] = header;
                 } else {
-                    headers.resize(depth, Header::new(self.args));
+                    headers.truncate(depth);
                     headers[depth - 1] = header;
                 }
                 last_depth = depth;
             }
 
             // TODO: Maybe don't do this every loop?
-            let mut full: String = Header::concat(&headers, " / ");
+            let mut full: String = headers
+                .iter()
+                .map(|x| x.content.to_owned())
+                .collect::<Vec<_>>()
+                .join(" / ");
+
             if !is_header {
                 full.push_str(&line);
             }

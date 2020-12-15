@@ -8,7 +8,12 @@ use marks::marks::Marks; // TODO: what
 #[paw::main]
 fn main(args: Args) -> Result<(), io::Error> {
     let count = args.count;
+    let debug = args.debug;
     let app = Marks::new(&args);
+
+    if (debug) {
+        println!("{:#?}", app.query);
+    }
 
     let mut results = app
         .find_files()
