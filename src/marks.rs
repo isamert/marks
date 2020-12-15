@@ -1,18 +1,15 @@
-use std::io;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use walkdir::WalkDir;
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
 use walkdir::DirEntry;
-use regex::Regex;
 use std::collections::HashMap;
 use rayon::prelude::*;
 
 use crate::args::Args;
 use crate::query::Query;
 use crate::utils::file_utils;
-use crate::parser::GentleIterator;
 use crate::result::{Header, SearchResult};
 
 lazy_static! {
@@ -91,7 +88,11 @@ impl<'a> Marks<'a> {
                     headers[lastn] = header;
                 } else {
                     headers.truncate(depth);
-                    headers[depth - 1] = header;
+
+                    // (depth - 1) will not work because header hiearchy may go like this:
+                    // * ***
+                    let curr_len = headers.len();
+                    headers[curr_len - 1] = header;
                 }
                 last_depth = depth;
             }

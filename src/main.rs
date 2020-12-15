@@ -11,7 +11,7 @@ fn main(args: Args) -> Result<(), io::Error> {
     let debug = args.debug;
     let app = Marks::new(&args);
 
-    if (debug) {
+    if debug {
         println!("{:#?}", app.query);
     }
 

@@ -18,6 +18,6 @@ lazy_static = "1.4"
 fuzzy-matcher = "*"
 structopt = { version = "0.3", features = [ "paw" ] }
 paw = "1.0"
-term = "*"
+term = "0.6"
 #sublime_fuzzy = "0.6"
 #combine = "4.4"
