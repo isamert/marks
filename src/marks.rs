@@ -29,12 +29,12 @@ enum DocType {
 }
 
 impl<'a> Marks<'a> {
-    pub fn new(args: &'a Args) -> Marks {
+    pub fn new(args: &'a Args, query: Query) -> Marks {
         // TODO: parametrize this
         let matcher = SkimMatcherV2::default();
 
         Marks {
-            query: Query::new(&args.query),
+            query,
             args,
             matcher,
         }

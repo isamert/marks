@@ -3,13 +3,18 @@ use rayon::prelude::*;
 // use sublime_fuzzy::best_match;
 
 use marks::args::Args;
+use marks::query::Query;
 use marks::marks::Marks; // TODO: what
 
 #[paw::main]
 fn main(args: Args) -> Result<(), io::Error> {
     let count = args.count;
     let debug = args.debug;
-    let app = Marks::new(&args);
+    let query = match Query::new(&args.query) {
+        Ok(x) => x,
+        Err(_x) => panic!("Malformed query: {}", args.query),
+    };
+    let app = Marks::new(&args, query);
 
     if debug {
         println!("{:#?}", app.query);
