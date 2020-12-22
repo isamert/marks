@@ -1,5 +1,6 @@
 use std::io;
 use rayon::prelude::*;
+use std::collections::HashMap;
 // use sublime_fuzzy::best_match;
 
 use marks::args::Args;
@@ -10,14 +11,10 @@ use marks::marks::Marks; // TODO: what
 fn main(args: Args) -> Result<(), io::Error> {
     let count = args.count;
     let debug = args.debug;
-    let query = match Query::new(&args.query) {
-        Ok(x) => x,
-        Err(_x) => panic!("Malformed query: {}", args.query),
-    };
-    let app = Marks::new(&args, query);
+    let app = Marks::new(&args);
 
     if debug {
-        println!("{:#?}", app.query);
+        println!("{:#?}", app.args);
     }
 
     let mut results = app

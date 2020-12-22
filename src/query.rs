@@ -2,7 +2,7 @@ use regex::Regex;
 
 use combine::{satisfy, choice,  between, many1, sep_by, Parser, EasyParser};
 use combine::parser::char::{spaces, char};
-use combine::stream::easy::{ParseError};
+use combine::stream::easy::ParseError;
 
 #[derive(Debug)]
 pub enum QueryToken {

@@ -1,36 +1,8 @@
 use std::fmt;
 use std::collections::HashMap;
 
+use crate::org::header::OrgHeader;
 use crate::args::Args;
-
-#[derive(Debug, Clone)]
-pub struct Header<'a> {
-    /// Args
-    pub args: &'a Args,
-    /// On which line is the header found.
-    pub line: usize,
-    /// This usually means the count of # (for md) or * (for org) at the beginning of the header line.
-    pub depth: usize,
-    /// The header itself, stripped from tags or other annotations.
-    pub content: String,
-    /// Tags found in the header. Means nothing for markdown headers.
-    pub tags: Vec<String>,
-    /// Properties found in :PROPERTIES: block of an org header. Means nothing for markdown headers.
-    pub properties: HashMap<String, String>,
-}
-
-impl<'a> Header<'a> {
-    pub fn new(args: &Args) -> Header {
-        Header {
-            line: 0,
-            depth: 0,
-            content: String::new(),
-            tags: vec![],
-            properties: HashMap::new(),
-            args,
-        }
-    }
-}
 
 #[derive(Debug)]
 pub struct SearchResult<'a> {
@@ -41,7 +13,7 @@ pub struct SearchResult<'a> {
     /// In which file?
     pub file_path: String,
     /// List of headers that this belongs to.
-    pub headers: Vec<Header<'a>>,
+    pub headers: Vec<String>,
     /// Full line content itself.
     pub content: String,
     pub args: &'a Args,
@@ -75,7 +47,7 @@ impl<'a> SearchResult<'a> {
             sep = &self.args.header_seperator;
 
             t.fg(term::color::BLUE).unwrap();
-            write!(t, "{}", header.content).unwrap();
+            write!(t, "{}", header).unwrap();
         }
 
         t.fg(term::color::WHITE).unwrap();
@@ -96,11 +68,7 @@ impl fmt::Display for SearchResult<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}:{}", &self.file_path, &self.line);
         if !self.args.no_headers {
-            let headers = self.headers
-                .iter()
-                .map(|x| x.content.to_string())
-                .collect::<Vec<_>>()
-                .join(&self.args.header_seperator);
+            let headers = self.headers.join(&self.args.header_seperator);
 
             write!(f, ":{}", headers);
         }
