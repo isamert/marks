@@ -95,3 +95,66 @@ where
         many(any())
     ).map(|(key, _, val)| (key, val))
 }
+
+
+#[test]
+fn test_hour() {
+    assert_eq!(hour().parse("13:27").unwrap().0, (13, 27));
+    assert_eq!(hour().parse("15:42").unwrap().0, (15, 42));
+}
+
+#[test]
+fn test_hour_range() {
+    assert_eq!(hour_range().parse("13:27").unwrap().0, ((13, 27), None));
+    assert_eq!(hour_range().parse("13:27-14:30").unwrap().0, ((13, 27), Some((14, 30))));
+    assert_eq!(hour_range().parse("19:00-19:30").unwrap().0, ((19, 00), Some((19, 30))));
+}
+
+#[test]
+fn test_org_date_time() {
+    assert_eq!(org_date_time().parse("DEADLINE: <2020-12-24 Thu>").unwrap().0, OrgDateTime {
+        is_active: true,
+        date_plan: OrgDatePlan::Deadline,
+        date_start: Utc.ymd(2020, 12, 24).and_hms(0, 0, 0),
+        date_end: None,
+        invertal: None,
+    });
+
+    assert_eq!(org_date_time().parse("DEADLINE: <2020-12-24 Thu 13:30>").unwrap().0, OrgDateTime {
+        is_active: true,
+        date_plan: OrgDatePlan::Deadline,
+        date_start: Utc.ymd(2020, 12, 24).and_hms(13, 30, 0),
+        date_end: None,
+        invertal: None,
+    });
+
+    assert_eq!(org_date_time().parse("DEADLINE: [2020-12-24 Thu 13:30]").unwrap().0, OrgDateTime {
+        is_active: false,
+        date_plan: OrgDatePlan::Deadline,
+        date_start: Utc.ymd(2020, 12, 24).and_hms(13, 30, 0),
+        date_end: None,
+        invertal: None,
+    });
+
+    assert_eq!(org_date_time().parse("DEADLINE: [2020-12-24 Thu 13:30 +1y]").unwrap().0, OrgDateTime {
+        is_active: false,
+        date_plan: OrgDatePlan::Deadline,
+        date_start: Utc.ymd(2020, 12, 24).and_hms(13, 30, 0),
+        date_end: None,
+        invertal: Some("+1y".into()),
+    });
+
+    assert_eq!(org_date_time().parse("DEADLINE: [2020-12-24 Thu 13:30-22:35 +1y]").unwrap().0, OrgDateTime {
+        is_active: false,
+        date_plan: OrgDatePlan::Deadline,
+        date_start: Utc.ymd(2020, 12, 24).and_hms(13, 30, 0),
+        date_end: Some(Utc.ymd(2020, 12, 24).and_hms(22, 35, 0)),
+        invertal: Some("+1y".into()),
+    });
+}
+
+#[test]
+fn test_org_tags() {
+    assert_eq!(org_tags().parse("  :tset:2tset:3tset:         tser **").unwrap(),
+               (vec!["test".into(), "test2".into(), "test3".into()], "tser **"))
+}

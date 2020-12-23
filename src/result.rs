@@ -1,7 +1,5 @@
 use std::fmt;
-use std::collections::HashMap;
 
-use crate::org::header::OrgHeader;
 use crate::args::Args;
 
 #[derive(Debug)]

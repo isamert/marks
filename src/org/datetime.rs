@@ -1,6 +1,6 @@
 use chrono::prelude::*;
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum OrgDatePlan {
     /// SCHEDULED dates
     Scheduled,
@@ -14,7 +14,7 @@ pub enum OrgDatePlan {
 /// <2003-09-16 Tue>
 /// <2003-09-16 Tue 12:00-12:30>
 /// <2003-09-16 Tue 12:00>--<2003-09-19 Tue 14:30>
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct OrgDateTime {
     /// <...> is for active dates, [...] is for passive dates.
     pub is_active: bool,

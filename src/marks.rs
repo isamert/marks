@@ -1,5 +1,4 @@
 use std::fs::File;
-use chrono::prelude::*;
 use std::io::{BufRead, BufReader};
 use walkdir::WalkDir;
 use fuzzy_matcher::FuzzyMatcher;
@@ -7,7 +6,6 @@ use fuzzy_matcher::skim::SkimMatcherV2;
 use walkdir::DirEntry;
 use std::collections::HashMap;
 use std::iter::Peekable;
-use rayon::prelude::*;
 use combine::Parser;
 
 use crate::args::Args;
@@ -96,13 +94,8 @@ impl<'a> Marks<'a> {
                 last_depth = depth;
 
                 // Check if any of the headers in the hierarchy contains the given tags
-                // or the given props
+                // or the given props. Skip the check if we already found match in any of the parent headers.
                 if !(!skip_section && depth > last_depth) {
-                    // FIXME: this does not work if the content has no header
-                    //        we can get around this by marking no header state as level-0 header.
-                    //        This may also give an opportunity to parse
-                    //        #+TITLE #+FILETAGS etc into a level-0 header struct
-
                     let matches_tags = self.args.tagged
                         .iter()
                         .all(|x| headers.iter().any(|header| header.tags.contains(x)));
@@ -119,6 +112,14 @@ impl<'a> Marks<'a> {
 
                     skip_section = !(matches_tags && matches_props)
                 }
+            }
+
+            // Skip 0-level if are looking for props or tags
+            // FIXME: For level-0 we might want to parse  #+TITLE #+FILETAGS etc. to make the check
+            //        but this requires these constructs to be found at the top of the file, otherwise
+            //        they'll become pointless.
+            if last_depth == 0 && (!self.args.tagged.is_empty() || !self.args.prop.is_empty()) {
+                skip_section = true;
             }
 
             if skip_section {

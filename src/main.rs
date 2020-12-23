@@ -1,10 +1,7 @@
 use std::io;
 use rayon::prelude::*;
-use std::collections::HashMap;
-// use sublime_fuzzy::best_match;
 
 use marks::args::Args;
-use marks::query::Query;
 use marks::marks::Marks; // TODO: what
 
 #[paw::main]
