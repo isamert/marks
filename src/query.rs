@@ -1,8 +1,8 @@
 use regex::Regex;
 
-use combine::{satisfy, choice,  between, many1, sep_by, Parser, EasyParser};
-use combine::parser::char::{spaces, char};
+use combine::parser::char::{char, spaces};
 use combine::stream::easy::ParseError;
+use combine::{between, choice, many1, satisfy, sep_by, EasyParser, Parser};
 
 #[derive(Debug)]
 pub enum QueryToken {
@@ -40,22 +40,27 @@ impl Query {
 
         let token = choice((
             between(char('"'), char('"'), many1(non_quote)).map(|x: String| QueryToken::Must(x)),
-            between(char('`'), char('`'), many1(non_backtick)).map(|x: String| QueryToken::Regex(Regex::new(&x).unwrap())),
+            between(char('`'), char('`'), many1(non_backtick))
+                .map(|x: String| QueryToken::Regex(Regex::new(&x).unwrap())),
             (char('-'), many1(non_ws)).map(|x| QueryToken::None(x.1)),
             many1(non_ws).map(|x| QueryToken::Plain(x)),
         ));
         let mut query = sep_by(token, spaces());
         let result: Result<(Vec<QueryToken>, &str), ParseError<&str>> = query.easy_parse(input);
 
-        result?.0.into_iter().for_each(|x| {
-            match x {
-                QueryToken::Regex(r) => regexes.push(r),
-                QueryToken::Plain(r) => rest.push(r),
-                QueryToken::Must(r) => musts.push(r),
-                QueryToken::None(r) => nones.push(r),
-            }
+        result?.0.into_iter().for_each(|x| match x {
+            QueryToken::Regex(r) => regexes.push(r),
+            QueryToken::Plain(r) => rest.push(r),
+            QueryToken::Must(r) => musts.push(r),
+            QueryToken::None(r) => nones.push(r),
         });
 
-        Ok(Query { full, musts, nones, regexes, rest })
+        Ok(Query {
+            full,
+            musts,
+            nones,
+            regexes,
+            rest,
+        })
     }
 }

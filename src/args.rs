@@ -35,11 +35,11 @@ pub struct Args {
     pub path: String,
 
     /// List of extensions for org files.
-    #[structopt(short, long, default_value="org")]
+    #[structopt(short, long, default_value = "org")]
     pub org_extension: Vec<String>,
 
     /// List of extensions for org files.
-    #[structopt(short, long, default_value="md")]
+    #[structopt(short, long, default_value = "md")]
     pub md_extension: Vec<String>,
 
     /// How many results do you want?
@@ -67,7 +67,7 @@ pub struct Args {
     pub no_headers: bool,
 
     /// A seperator to insert between headers while outputting.
-    #[structopt(long, default_value="/")]
+    #[structopt(long, default_value = "/")]
     pub header_seperator: String,
 
     /// List of tags that headers should contain. Headers inherit parents tags.
@@ -77,17 +77,18 @@ pub struct Args {
     /// List of key=value pairs. If given, headers should contain given property in their property list.
     #[structopt(long, parse(try_from_str = parse_props))]
     pub prop: Vec<(String, String)>,
-
     // Output file, stdout if not present
     // #[structopt(parse(from_os_str))]
     // output: Option<PathBuf>,
 }
 
 fn parse_props<'a>(s: &'a str) -> Result<(String, String), String> {
-    let pos = s.find('=').ok_or_else(|| format!("invalid PROP=value: no `=` found in `{}`", s))?;
+    let pos = s
+        .find('=')
+        .ok_or_else(|| format!("invalid PROP=value: no `=` found in `{}`", s))?;
     Ok((s[..pos].to_string(), s[pos + 1..].to_string()))
 }
 
-fn parse_query<'a>(s: &'a str) -> Result<Query, impl Error + 'a>  {
+fn parse_query<'a>(s: &'a str) -> Result<Query, impl Error + 'a> {
     Query::new(s)
 }

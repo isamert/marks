@@ -1,5 +1,5 @@
-use std::io;
 use rayon::prelude::*;
+use std::io;
 
 use marks::args::Args;
 use marks::marks::Marks; // TODO: what
@@ -23,7 +23,8 @@ fn main(args: Args) -> Result<(), io::Error> {
         .collect::<Vec<_>>();
 
     results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
-    results.iter()
+    results
+        .iter()
         .take(count.unwrap_or(usize::MAX))
         .for_each(|result| result.print());
 

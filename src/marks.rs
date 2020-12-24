@@ -1,20 +1,20 @@
+use combine::Parser;
+use fuzzy_matcher::skim::SkimMatcherV2;
+use fuzzy_matcher::FuzzyMatcher;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use walkdir::WalkDir;
-use fuzzy_matcher::FuzzyMatcher;
-use fuzzy_matcher::skim::SkimMatcherV2;
-use walkdir::DirEntry;
-use std::collections::HashMap;
 use std::iter::Peekable;
-use combine::Parser;
+use walkdir::DirEntry;
+use walkdir::WalkDir;
 
 use crate::args::Args;
-use crate::utils::file_utils;
-use crate::result::SearchResult;
 use crate::extensions::StartsWithIgnoreCase;
 use crate::org::datetime::OrgDateTime;
 use crate::org::header::OrgHeader;
 use crate::parsers;
+use crate::result::SearchResult;
+use crate::utils::file_utils;
 
 lazy_static! {
     // TODO: make it extendable
@@ -37,10 +37,7 @@ impl<'a> Marks<'a> {
         // TODO: parametrize this
         let matcher = SkimMatcherV2::default();
 
-        Marks {
-            args,
-            matcher,
-        }
+        Marks { args, matcher }
     }
 
     pub fn find_files(&'a self) -> impl Iterator<Item = DirEntry> + 'a {
@@ -50,12 +47,14 @@ impl<'a> Marks<'a> {
             .filter_map(|e| e.ok())
             .filter_map(move |e| {
                 if e.file_type().is_file() {
-                    if (!self.args.no_org && self.is_org_file(&e)) || (!self.args.no_markdown && self.is_md_file(&e)) {
-                        return Some(e)
+                    if (!self.args.no_org && self.is_org_file(&e))
+                        || (!self.args.no_markdown && self.is_md_file(&e))
+                    {
+                        return Some(e);
                     }
                 }
 
-                return None
+                return None;
             })
     }
 
@@ -96,19 +95,21 @@ impl<'a> Marks<'a> {
                 // Check if any of the headers in the hierarchy contains the given tags
                 // or the given props. Skip the check if we already found match in any of the parent headers.
                 if !(!skip_section && depth > last_depth) {
-                    let matches_tags = self.args.tagged
+                    let matches_tags = self
+                        .args
+                        .tagged
                         .iter()
                         .all(|x| headers.iter().any(|header| header.tags.contains(x)));
 
-                    let matches_props = self.args.prop
-                        .iter()
-                        .all(|(key, val)| headers
-                             .iter()
-                             .any(|header| header
-                                  .properties
-                                  .get(key)
-                                  .map(|header_val| header_val == val)
-                                  .unwrap_or(false)));
+                    let matches_props = self.args.prop.iter().all(|(key, val)| {
+                        headers.iter().any(|header| {
+                            header
+                                .properties
+                                .get(key)
+                                .map(|header_val| header_val == val)
+                                .unwrap_or(false)
+                        })
+                    });
 
                     skip_section = !(matches_tags && matches_props)
                 }
@@ -140,24 +141,29 @@ impl<'a> Marks<'a> {
                 full.push_str(&filename);
             }
 
-
             // Check regexes
             if !self.args.query.regexes.iter().all(|x| x.is_match(&full)) {
-                continue
+                continue;
             }
 
             // Check musts
             if !self.args.query.musts.iter().all(|x| full.contains(x)) {
-                continue
+                continue;
             }
 
             // Check nones
             if self.args.query.nones.iter().any(|x| full.contains(x)) {
-                continue
+                continue;
             }
 
             // Fuzzy match
-            let points = self.args.query.rest.iter().filter_map(|q| self.matcher.fuzzy_match(&full, &q)).collect::<Vec<_>>();
+            let points = self
+                .args
+                .query
+                .rest
+                .iter()
+                .filter_map(|q| self.matcher.fuzzy_match(&full, &q))
+                .collect::<Vec<_>>();
             if points.len() > 0 || self.args.query.rest.len() == 0 {
                 results.push(SearchResult {
                     line: index + 1,
@@ -174,7 +180,8 @@ impl<'a> Marks<'a> {
     }
 
     fn is_file_blacklisted(&'a self, entry: &DirEntry) -> bool {
-        entry.file_name()
+        entry
+            .file_name()
             .to_str()
             .map(|s| BLACKLIST.contains(&s))
             .unwrap_or(false)
@@ -183,14 +190,14 @@ impl<'a> Marks<'a> {
     fn is_org_file(&'a self, e: &DirEntry) -> bool {
         match e.path().extension().map(|x| x.to_str()).flatten() {
             Some(x) => self.args.org_extension.iter().any(|y| x == y),
-            None => false
+            None => false,
         }
     }
 
     fn is_md_file(&'a self, e: &DirEntry) -> bool {
         match e.path().extension().map(|x| x.to_str()).flatten() {
             Some(x) => self.args.md_extension.iter().any(|y| x == y),
-            None => false
+            None => false,
         }
     }
 
@@ -202,8 +209,16 @@ impl<'a> Marks<'a> {
         }
     }
 
-    fn parse_header<I>(&self, iter: &mut Peekable<I>, typ: &DocType, line: &str, idx: usize) -> Option<OrgHeader>
-    where I: Iterator<Item = (usize, String)> {
+    fn parse_header<I>(
+        &self,
+        iter: &mut Peekable<I>,
+        typ: &DocType,
+        line: &str,
+        idx: usize,
+    ) -> Option<OrgHeader>
+    where
+        I: Iterator<Item = (usize, String)>,
+    {
         let x = match typ {
             DocType::Markdown => '#',
             DocType::OrgMode => '*',
@@ -245,7 +260,9 @@ impl<'a> Marks<'a> {
     }
 
     fn parse_org_date_time<I>(&self, iter: &mut Peekable<I>) -> Option<OrgDateTime>
-    where I: Iterator<Item = (usize, String)> {
+    where
+        I: Iterator<Item = (usize, String)>,
+    {
         // Only ISO 8601 dates are supported
         // TODO: handle plain timestamps after headers
         let has_schedule = iter
@@ -255,7 +272,8 @@ impl<'a> Marks<'a> {
 
         if has_schedule {
             let (_, line_date) = iter.next().unwrap();
-            let result: Result<(OrgDateTime, &str), _> = parsers::org_date_time().parse(line_date.as_str());
+            let result: Result<(OrgDateTime, &str), _> =
+                parsers::org_date_time().parse(line_date.as_str());
             result.ok().map(|x| x.0)
         } else {
             None
@@ -264,7 +282,9 @@ impl<'a> Marks<'a> {
 
     /// Parse the tags from given line and return the tags along with the header that is stripped from the tags and whitespace.
     fn parse_org_tags<I>(&self, chars: &mut I) -> (Vec<String>, String)
-    where I: DoubleEndedIterator<Item = char> {
+    where
+        I: DoubleEndedIterator<Item = char>,
+    {
         // TODO: https://orgmode.org/guide/Tags.html
         //       According to here tags should be inherited by child headers, this does not support this.
         //       This can be handled while doing the search.
@@ -272,8 +292,9 @@ impl<'a> Marks<'a> {
         let has_tags = rev_chars.peek().map(|x| *x == ':').unwrap_or(false);
         let rev_header = rev_chars.collect::<String>();
 
-       if has_tags {
-            let result: Result<(Vec<String>, &str), _> = parsers::org_tags().parse(rev_header.as_str());
+        if has_tags {
+            let result: Result<(Vec<String>, &str), _> =
+                parsers::org_tags().parse(rev_header.as_str());
             if let Ok((tags, rest)) = result {
                 (tags, rest.chars().rev().collect::<String>())
             } else {
@@ -285,8 +306,13 @@ impl<'a> Marks<'a> {
     }
 
     fn parse_org_props<I>(&self, iter: &mut Peekable<I>) -> HashMap<String, String>
-    where I: Iterator<Item = (usize, String)> {
-        let has_props = iter.peek().map(|(_, x)| x.starts_with_i(":PROPERTIES:")).unwrap_or(false);
+    where
+        I: Iterator<Item = (usize, String)>,
+    {
+        let has_props = iter
+            .peek()
+            .map(|(_, x)| x.starts_with_i(":PROPERTIES:"))
+            .unwrap_or(false);
         let mut props: HashMap<String, String> = HashMap::new();
 
         if has_props {
@@ -294,16 +320,17 @@ impl<'a> Marks<'a> {
 
             while let Some((_, prop)) = iter.next() {
                 if prop.starts_with_i(":END:") {
-                    return props
+                    return props;
                 } else {
-                    let result: Result<((String, String), &str), _> = parsers::org_property().parse(&prop);
+                    let result: Result<((String, String), &str), _> =
+                        parsers::org_property().parse(&prop);
                     if let Ok(((key, val), _)) = result {
                         props.insert(key, val);
                     } else {
                         // Probably :PROPERTIES: block does not have :END:
                         // (I just assumed this to not to consume whole file, it might just be a bad property line)
                         // so just return what we just have found so far
-                        return props
+                        return props;
                     }
                 }
             }
