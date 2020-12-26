@@ -1,4 +1,4 @@
-use std::error::Error;
+use std::{error::Error, path::PathBuf};
 use structopt::StructOpt;
 
 use crate::query::Query;
@@ -31,8 +31,8 @@ pub struct Args {
     pub query: Query,
 
     /// Where to search for.
-    #[structopt(short, long, default_value = ".")]
-    pub path: String,
+    #[structopt(short, long, env = "PWD", parse(try_from_str = parse_path))]
+    pub path: PathBuf,
 
     /// List of extensions for org files.
     #[structopt(short, long, default_value = "org")]
@@ -95,4 +95,8 @@ fn parse_props<'a>(s: &'a str) -> Result<(String, String), String> {
 
 fn parse_query<'a>(s: &'a str) -> Result<Query, impl Error + 'a> {
     Query::new(s)
+}
+
+fn parse_path<'a>(s: &'a str) -> Result<PathBuf, impl Error + 'a> {
+    PathBuf::from(s).canonicalize()
 }
