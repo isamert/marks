@@ -16,11 +16,6 @@ use crate::parsers;
 use crate::result::SearchResult;
 use crate::utils::file_utils;
 
-lazy_static! {
-    // TODO: make it extendable
-    static ref BLACKLIST: Vec<&'static str> = vec!["node_modules"];
-}
-
 pub struct Marks<'a> {
     pub args: &'a Args,
     pub matcher: SkimMatcherV2,
@@ -183,7 +178,7 @@ impl<'a> Marks<'a> {
         entry
             .file_name()
             .to_str()
-            .map(|s| BLACKLIST.contains(&s))
+            .map(|s| self.args.blacklist_folder.contains(&s.to_string()))
             .unwrap_or(false)
     }
 

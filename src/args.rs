@@ -31,7 +31,7 @@ pub struct Args {
     pub query: Query,
 
     /// Where to search for.
-    #[structopt(short, long)]
+    #[structopt(short, long, default_value = ".")]
     pub path: String,
 
     /// List of extensions for org files.
@@ -80,6 +80,10 @@ pub struct Args {
     // Output file, stdout if not present
     // #[structopt(parse(from_os_str))]
     // output: Option<PathBuf>,
+
+    /// List folder names to blacklist
+    #[structopt(long)]
+    pub blacklist_folder: Vec<String>,
 }
 
 fn parse_props<'a>(s: &'a str) -> Result<(String, String), String> {
