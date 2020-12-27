@@ -8,10 +8,10 @@ use std::iter::Peekable;
 use walkdir::DirEntry;
 use walkdir::WalkDir;
 
-use crate::args::Args;
+use crate::{args::Args, org::header::OrgPriority};
 use crate::extensions::StartsWithIgnoreCase;
 use crate::org::datetime::OrgDateTime;
-use crate::org::header::OrgHeader;
+use crate::org::header::{OrgTodo, OrgHeader};
 use crate::parsers;
 use crate::result::SearchResult;
 use crate::utils::file_utils;
@@ -53,6 +53,7 @@ impl<'a> Marks<'a> {
             })
     }
 
+    // TODO: refactor/divide into smaller functions
     pub fn search_file(&self, file: &DirEntry) -> Option<Vec<SearchResult>> {
         let filename = file.file_name().to_str()?;
         let doc_type = self.get_doc_type(&file);
@@ -108,13 +109,46 @@ impl<'a> Marks<'a> {
 
                     skip_section = !(matches_tags && matches_props)
                 }
+
+                if !skip_section {
+                    let curr_header = headers.last().unwrap();
+                    if !self.args.todo.is_empty() {
+                        let has_todo = self.args.todo.iter().any(|x| curr_header.todo.as_ref().map_or(false, |y| y == x));
+                        skip_section = skip_section || !has_todo;
+                    }
+
+                    if !self.args.priority.is_empty() {
+                        let is_right_priority = self
+                            .args
+                            .priority
+                            .iter()
+                            .any(|x| curr_header.priority.as_ref().map_or(false, |y| x == y));
+
+                        skip_section = skip_section || !is_right_priority;
+                    }
+
+                    if let Some(priority) = &self.args.priority_lt {
+                        let is_lt_than = curr_header.priority.as_ref().map_or(false, |x| x < priority);
+                        skip_section = skip_section || !is_lt_than;
+                    }
+
+                    if let Some(priority) = &self.args.priority_gt {
+                        let is_gt_than = curr_header.priority.as_ref().map_or(false, |x| x > priority);
+                        skip_section = skip_section || !is_gt_than;
+                    }
+                }
             }
 
             // Skip 0-level if are looking for props or tags
             // FIXME: For level-0 we might want to parse  #+TITLE #+FILETAGS etc. to make the check
             //        but this requires these constructs to be found at the top of the file, otherwise
             //        they'll become pointless.
-            if last_depth == 0 && (!self.args.tagged.is_empty() || !self.args.prop.is_empty()) {
+            if last_depth == 0
+                && (!self.args.tagged.is_empty()
+                    || !self.args.prop.is_empty()
+                    || !self.args.priority.is_empty()
+                    || self.args.priority_lt.is_some()
+                    || self.args.priority_gt.is_some()) {
                 skip_section = true;
             }
 
@@ -238,19 +272,22 @@ impl<'a> Marks<'a> {
 
         // TODO: it might be good if user does not search for these, simply don't parse them
         //       ex. if --prop does not exist in args, simply skip parse_org_props() call etc.
-        let (tags, content) = self.parse_org_tags(&mut chars);
+        let (tags, rest) = self.parse_org_tags(&mut chars);
+        let ((todo, priority), content) = parsers::org_todo().parse(rest.as_str()).ok()?;
         // FIXME: properties may come after datetime or vice versa. Not really sure tho
         let datetime = self.parse_org_date_time(iter);
         let properties = self.parse_org_props(iter);
 
         Some(OrgHeader {
             depth,
-            content,
+            content: content.into(),
             properties,
             tags,
             datetime,
             line: idx,
             args: self.args,
+            todo,
+            priority,
         })
     }
 
@@ -280,9 +317,6 @@ impl<'a> Marks<'a> {
     where
         I: DoubleEndedIterator<Item = char>,
     {
-        // TODO: https://orgmode.org/guide/Tags.html
-        //       According to here tags should be inherited by child headers, this does not support this.
-        //       This can be handled while doing the search.
         let mut rev_chars = chars.rev().peekable();
         let has_tags = rev_chars.peek().map(|x| *x == ':').unwrap_or(false);
         let rev_header = rev_chars.collect::<String>();

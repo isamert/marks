@@ -1,7 +1,7 @@
 use std::{error::Error, path::PathBuf};
 use structopt::StructOpt;
 
-use crate::query::Query;
+use crate::{org::header::{OrgPriority, OrgTodo}, query::Query};
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "marks")]
@@ -34,6 +34,39 @@ pub struct Args {
     #[structopt(short, long, env = "PWD", parse(try_from_str = parse_path))]
     pub path: PathBuf,
 
+    /// How many results do you want?
+    #[structopt(short, long)]
+    pub count: Option<usize>,
+
+    /// TODO states.
+    #[structopt(long, parse(try_from_str = parse_todos))]
+    pub todo: Vec<OrgTodo>,
+
+    /// List of priorities. Note that items without priorites will not match if you use this option.
+    #[structopt(long, parse(try_from_str = parse_priority))]
+    pub priority: Vec<OrgPriority>,
+
+    /// Maximum priority.
+    #[structopt(long, parse(try_from_str = parse_priority))]
+    pub priority_lt: Option<OrgPriority>,
+
+    /// Minimum priority.
+    #[structopt(long, parse(try_from_str = parse_priority))]
+    pub priority_gt: Option<OrgPriority>,
+
+    /// List of tags that headers should contain. Headers inherit parents tags.
+    #[structopt(long)]
+    pub tagged: Vec<String>,
+
+    /// List of key=value pairs. If given, headers should contain given property in their property list.
+    #[structopt(long, parse(try_from_str = parse_props))]
+    pub prop: Vec<(String, String)>,
+
+    /// Print only matching headers.
+    /// This does not change anything in matching algorithm, only hides the content from the results.
+    #[structopt(long)]
+    pub only_headers: bool,
+
     /// List of extensions for org files.
     #[structopt(short, long, default_value = "org")]
     pub org_extension: Vec<String>,
@@ -41,10 +74,6 @@ pub struct Args {
     /// List of extensions for org files.
     #[structopt(short, long, default_value = "md")]
     pub md_extension: Vec<String>,
-
-    /// How many results do you want?
-    #[structopt(short, long)]
-    pub count: Option<usize>,
 
     /// Don't search for org files.
     #[structopt(long)]
@@ -70,17 +99,6 @@ pub struct Args {
     #[structopt(long, default_value = "/")]
     pub header_seperator: String,
 
-    /// List of tags that headers should contain. Headers inherit parents tags.
-    #[structopt(long)]
-    pub tagged: Vec<String>,
-
-    /// List of key=value pairs. If given, headers should contain given property in their property list.
-    #[structopt(long, parse(try_from_str = parse_props))]
-    pub prop: Vec<(String, String)>,
-    // Output file, stdout if not present
-    // #[structopt(parse(from_os_str))]
-    // output: Option<PathBuf>,
-
     /// List folder names to blacklist
     #[structopt(long)]
     pub blacklist_folder: Vec<String>,
@@ -99,4 +117,16 @@ fn parse_query<'a>(s: &'a str) -> Result<Query, impl Error + 'a> {
 
 fn parse_path<'a>(s: &'a str) -> Result<PathBuf, impl Error + 'a> {
     PathBuf::from(s).canonicalize()
+}
+
+fn parse_todos<'a>(s: &'a str) -> Result<OrgTodo, String> {
+    Ok(match s.to_uppercase().as_ref() {
+        "TODO" => OrgTodo::TODO,
+        "DONE" => OrgTodo::DONE,
+        x => OrgTodo::Other(x.into())
+    })
+}
+
+fn parse_priority<'a>(s: &'a str) -> Result<OrgPriority, String> {
+    Ok(OrgPriority(s.into()))
 }

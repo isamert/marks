@@ -5,6 +5,7 @@ use combine::Stream;
 use combine::*;
 
 use crate::org::datetime::{OrgDatePlan, OrgDateTime};
+use crate::org::header::*;
 
 /// Parse `HH:MM`.
 pub fn hour<Input>() -> impl Parser<Input, Output = (u32, u32)>
@@ -103,6 +104,30 @@ where
         spaces().silent(),
     )
         .map(|(_, _, tags, _)| tags)
+}
+
+pub fn org_todo<Input>() -> impl Parser<Input, Output = (Option<OrgTodo>, Option<OrgPriority>)>
+where
+    Input: Stream<Token = char>,
+    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
+{
+    let org_priority = (token('['), token('#'), many(alpha_num()), token(']'))
+        .map(|(_, _, priority, _)| OrgPriority(priority));
+
+    (
+        spaces().silent(),
+        optional(attempt(many1(upper()).and(space()).map(
+            |(x, _): (String, _)| match x.as_str() {
+                "TODO" => OrgTodo::TODO,
+                "DONE" => OrgTodo::DONE,
+                _ => OrgTodo::Other(x),
+            },
+        ))),
+        spaces().silent(),
+        optional(attempt(org_priority)),
+        spaces().silent(),
+    )
+        .map(|(_, todo, _, priority, _)| (todo, priority))
 }
 
 pub fn org_property<Input>() -> impl Parser<Input, Output = (String, String)>
@@ -222,4 +247,28 @@ fn test_org_tags() {
             "tser **"
         )
     )
+}
+
+#[test]
+fn test_org_todo() {
+    assert_eq!(
+        org_todo().parse(" TODO The Ego and Its Own").unwrap(),
+        ((Some(OrgTodo::TODO), None), "The Ego and Its Own")
+    );
+
+    assert_eq!(
+        org_todo().parse("DONE [#B] The German Ideology").unwrap(),
+        (
+            (Some(OrgTodo::DONE), Some(OrgPriority("B".into()))),
+            "The German Ideology"
+        )
+    );
+
+    assert_eq!(
+        org_todo().parse("PROG [#33] hehe").unwrap(),
+        (
+            (Some(OrgTodo::Other("PROG".into())), Some(OrgPriority("33".into()))),
+            "hehe"
+        )
+    );
 }

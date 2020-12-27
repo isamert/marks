@@ -26,6 +26,19 @@ pub struct Query {
     pub rest: Vec<String>,
 }
 
+/// Solely for testing
+impl PartialEq for Query {
+    fn eq(&self, other: &Self) -> bool {
+        self.full == other.full
+            && self.musts == other.musts
+            && self.nones == other.nones
+            && self.regexes.iter().zip(other.regexes.iter()).all(|(x, y)| x.as_str() == y.as_str())
+            && self.rest == other.rest
+    }
+}
+
+impl Eq for Query {}
+
 impl Query {
     pub fn new(input: &str) -> Result<Query, ParseError<&str>> {
         let full = input.to_string();
@@ -63,4 +76,29 @@ impl Query {
             rest,
         })
     }
+}
+
+impl Default for Query {
+    fn default() -> Self {
+        Query {
+            full: String::new(),
+            musts: vec![],
+            nones: vec![],
+            regexes: vec![],
+            rest: vec![],
+        }
+    }
+}
+
+#[test]
+fn test_parse_query() {
+    assert_eq!(Query::new("").unwrap(), Query::default());
+    assert_eq!(Query::new("-badword \"stuff\" \"another stuff\" hehe `a regex`").unwrap(), Query {
+        full: "-badword \"stuff\" \"another stuff\" hehe `a regex`".into(),
+        musts: vec!["stuff".into(), "another stuff".into()],
+        nones: vec!["badword".into()],
+        rest: vec!["hehe".into()],
+        regexes: vec![Regex::new("a regex").unwrap()],
+        ..Default::default()
+    });
 }
