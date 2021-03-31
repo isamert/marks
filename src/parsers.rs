@@ -30,6 +30,30 @@ where
     (hour(), optional(token('-').and(hour()))).map(|(x, y)| (x, y.map(|(_, a)| a)))
 }
 
+
+/// Parse `HH:MM-HH:MM`. Second part is optional.
+pub fn date_time_range<Input>() -> impl Parser<Input, Output = (DateTime<Utc>, Option<DateTime<Utc>>)>
+where
+    Input: Stream<Token = char>,
+    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
+{
+    (
+        count(4, digit()).map(|x: String| x.parse::<i32>().unwrap()),
+        token('-'),
+        count(2, digit()).map(|x: String| x.parse::<u32>().unwrap()),
+        token('-'),
+        count(2, digit()).map(|x: String| x.parse::<u32>().unwrap()),
+        spaces(),
+        optional(count(3, letter()).map(|x: String| x)),
+        spaces().silent(),
+        optional(hour_range()).map(|hour| hour.unwrap_or(((0, 0), None))),
+    ).map(|(year, _, month, _, day, _, _, _, hour)| (
+        Utc.ymd(year, month, day).and_hms(hour.0 .0, hour.0 .1, 0),
+        hour.1.map(|end| Utc.ymd(year, month, day).and_hms(end.0, end.1, 0))
+    ))
+}
+
+
 pub fn org_date_time<Input>() -> impl Parser<Input, Output = OrgDateTime>
 where
     Input: Stream<Token = char>,
@@ -47,48 +71,18 @@ where
         token(':'),
         spaces().silent(),
         choice((token('<'), token('['))).map(|c| c == '<'), // < means active, [ means inactive
-        count(4, digit()).map(|x: String| x.parse::<i32>().unwrap()),
-        token('-'),
-        count(2, digit()).map(|x: String| x.parse::<u32>().unwrap()),
-        token('-'),
-        count(2, digit()).map(|x: String| x.parse::<u32>().unwrap()),
-        spaces(),
-        count(3, letter()).map(|x: String| x),
-        spaces().silent(),
-        optional(hour_range()).map(|hour| hour.unwrap_or(((0, 0), None))),
+        date_time_range(),
         spaces().silent(),
         optional(invertal_parser),
         choice((token(']'), token('>'))),
     )
-        .map(
-            |(
-                _,
-                date_plan,
-                _,
-                _,
-                is_active,
-                year,
-                _,
-                month,
-                _,
-                day,
-                _,
-                _day_str,
-                _,
-                hour,
-                _,
-                invertal,
-                _,
-            )| OrgDateTime {
-                is_active,
-                date_plan,
-                date_start: Utc.ymd(year, month, day).and_hms(hour.0 .0, hour.0 .1, 0),
-                date_end: hour
-                    .1
-                    .map(|end| Utc.ymd(year, month, day).and_hms(end.0, end.1, 0)),
-                invertal,
-            },
-        )
+        .map(|(_, date_plan, _, _, is_active, datetime, _, invertal, _,)| OrgDateTime {
+            is_active,
+            date_plan,
+            date_start: datetime.0,
+            date_end: datetime.1,
+            invertal,
+        })
 }
 
 pub fn org_tags<Input>() -> impl Parser<Input, Output = Vec<String>>

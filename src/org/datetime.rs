@@ -14,7 +14,7 @@ pub enum OrgDatePlan {
 /// <2003-09-16 Tue>
 /// <2003-09-16 Tue 12:00-12:30>
 /// <2003-09-16 Tue 12:00>--<2003-09-19 Tue 14:30>
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct OrgDateTime {
     /// <...> is for active dates, [...] is for passive dates.
     pub is_active: bool,
@@ -29,4 +29,29 @@ pub struct OrgDateTime {
     /// Invertal. Not quite useful at this point.
     /// https://orgmode.org/manual/Repeated-tasks.html
     pub invertal: Option<String>,
+}
+
+impl Default for OrgDateTime {
+    fn default() -> Self {
+        OrgDateTime {
+            is_active: true,
+            date_plan: OrgDatePlan::Plain,
+            date_start: Utc::now(),
+            date_end: None,
+            invertal: None,
+        }
+    }
+}
+
+impl OrgDateTime {
+    pub fn compare_with(&self, other: &Self, compare1: fn(&DateTime<Utc>, &DateTime<Utc>) -> bool, compare2: fn(&Date<Utc>, &Date<Utc>) -> bool) -> bool {
+        let compare_only_dates = (other.date_start.hour(), other.date_start.minute(), other.date_start.second()) == (0,0,0);
+        let is_same_plan = self.date_plan == other.date_plan;
+
+        is_same_plan && if compare_only_dates {
+            compare2(&self.date_start.date(), &other.date_start.date())
+        } else {
+            compare1(&self.date_start, &other.date_start)
+        }
+    }
 }

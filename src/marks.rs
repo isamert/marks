@@ -8,10 +8,10 @@ use std::iter::Peekable;
 use walkdir::DirEntry;
 use walkdir::WalkDir;
 
-use crate::{args::Args, org::header::OrgPriority};
+use crate::args::Args;
 use crate::extensions::StartsWithIgnoreCase;
 use crate::org::datetime::OrgDateTime;
-use crate::org::header::{OrgTodo, OrgHeader};
+use crate::org::header::OrgHeader;
 use crate::parsers;
 use crate::result::SearchResult;
 use crate::utils::file_utils;
@@ -113,7 +113,11 @@ impl<'a> Marks<'a> {
                 if !skip_section {
                     let curr_header = headers.last().unwrap();
                     if !self.args.todo.is_empty() {
-                        let has_todo = self.args.todo.iter().any(|x| curr_header.todo.as_ref().map_or(false, |y| y == x));
+                        let has_todo = self
+                            .args
+                            .todo
+                            .iter()
+                            .any(|x| curr_header.todo.as_ref().map_or(false, |y| y == x));
                         skip_section = skip_section || !has_todo;
                     }
 
@@ -128,13 +132,27 @@ impl<'a> Marks<'a> {
                     }
 
                     if let Some(priority) = &self.args.priority_lt {
-                        let is_lt_than = curr_header.priority.as_ref().map_or(false, |x| x < priority);
+                        let is_lt_than = curr_header
+                            .priority
+                            .as_ref()
+                            .map_or(false, |x| x < priority);
                         skip_section = skip_section || !is_lt_than;
                     }
 
                     if let Some(priority) = &self.args.priority_gt {
-                        let is_gt_than = curr_header.priority.as_ref().map_or(false, |x| x > priority);
+                        let is_gt_than = curr_header
+                            .priority
+                            .as_ref()
+                            .map_or(false, |x| x > priority);
                         skip_section = skip_section || !is_gt_than;
+                    }
+
+                    if let Some(schedule) = &self.args.scheduled_at {
+                        //println!("{:?}", curr_header.datetime);
+                        skip_section = skip_section || !curr_header
+                            .datetime
+                            .as_ref()
+                            .map_or(false, |datetime| datetime.compare_with(schedule, PartialEq::eq, PartialEq::eq));
                     }
                 }
             }
@@ -148,7 +166,9 @@ impl<'a> Marks<'a> {
                     || !self.args.prop.is_empty()
                     || !self.args.priority.is_empty()
                     || self.args.priority_lt.is_some()
-                    || self.args.priority_gt.is_some()) {
+                    || self.args.priority_gt.is_some()
+                    || self.args.scheduled_at.is_some())
+            {
                 skip_section = true;
             }
 
@@ -157,31 +177,29 @@ impl<'a> Marks<'a> {
             }
 
             // TODO: Maybe don't do this every loop?
-            let mut full: String = headers
-                .iter()
-                .map(|x| x.content.to_owned())
-                .collect::<Vec<_>>()
-                .join(" / ");
+            let full: String = {
+                let mut result = headers
+                    .iter()
+                    .map(|x| x.content.to_owned())
+                    .collect::<Vec<_>>()
+                    .join(" / ");
 
-            if !is_header {
-                full.push_str(&line);
-            }
-            if self.args.search_filename {
-                full.push_str(&filename);
-            }
+                if !is_header {
+                    result.push_str(&line);
+                }
+
+                if self.args.search_filename {
+                    result.push_str(&filename);
+                }
+
+                result
+            };
 
             // Check regexes
-            if !self.args.query.regexes.iter().all(|x| x.is_match(&full)) {
-                continue;
-            }
-
-            // Check musts
-            if !self.args.query.musts.iter().all(|x| full.contains(x)) {
-                continue;
-            }
-
-            // Check nones
-            if self.args.query.nones.iter().any(|x| full.contains(x)) {
+            if !self.args.query.regexes.iter().all(|x| x.is_match(&full))
+                || !self.args.query.musts.iter().all(|x| full.contains(x))
+                || self.args.query.nones.iter().any(|x| full.contains(x))
+            {
                 continue;
             }
 

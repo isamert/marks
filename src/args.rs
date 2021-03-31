@@ -1,7 +1,8 @@
 use std::{error::Error, path::PathBuf};
+use combine::Parser;
 use structopt::StructOpt;
 
-use crate::{org::header::{OrgPriority, OrgTodo}, query::Query};
+use crate::{org::{datetime::{OrgDatePlan, OrgDateTime}, header::{OrgPriority, OrgTodo}}, parsers, query::Query};
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "marks")]
@@ -53,6 +54,18 @@ pub struct Args {
     /// Minimum priority.
     #[structopt(long, parse(try_from_str = parse_priority))]
     pub priority_gt: Option<OrgPriority>,
+
+    /// Scheduled date.
+    #[structopt(long, parse(try_from_str = parse_org_scheduled))]
+    pub scheduled_at: Option<OrgDateTime>,
+
+    /// Scheduled before.
+    #[structopt(long, parse(try_from_str = parse_org_scheduled))]
+    pub scheduled_before: Option<OrgDateTime>,
+
+    /// Scheduled after.
+    #[structopt(long, parse(try_from_str = parse_org_scheduled))]
+    pub scheduled_after: Option<OrgDateTime>,
 
     /// List of tags that headers should contain. Headers inherit parents tags.
     #[structopt(long)]
@@ -129,4 +142,17 @@ fn parse_todos<'a>(s: &'a str) -> Result<OrgTodo, String> {
 
 fn parse_priority<'a>(s: &'a str) -> Result<OrgPriority, String> {
     Ok(OrgPriority(s.into()))
+}
+
+fn parse_org_date_time<'a>(s: &'a str, date_plan: OrgDatePlan) -> Result<OrgDateTime, impl Error + 'a> {
+    parsers::date_time_range().parse(s).map(|(dt, _)| OrgDateTime {
+        date_start: dt.0,
+        date_end: dt.1,
+        date_plan,
+        ..Default::default()
+    })
+}
+
+fn parse_org_scheduled<'a>(s: &'a str) -> Result<OrgDateTime, impl Error + 'a> {
+    parse_org_date_time(s, OrgDatePlan::Scheduled)
 }
