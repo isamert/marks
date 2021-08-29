@@ -2,8 +2,8 @@ use std::fmt;
 
 use crate::args::Args;
 
-#[derive(Debug)]
-pub struct SearchResult<'a> {
+#[derive(Debug, Eq, PartialEq)]
+pub struct SearchResult {
     /// Score.
     pub score: i64,
     /// Line number.
@@ -14,13 +14,12 @@ pub struct SearchResult<'a> {
     pub headers: Vec<String>,
     /// Full line content itself.
     pub content: String,
-    pub args: &'a Args,
 }
 
-impl<'a> SearchResult<'a> {
+impl SearchResult {
     #[allow(unused_must_use)]
-    pub fn print(&self) {
-        if self.args.no_color {
+    pub fn print(&self, args: &Args) {
+        if args.no_color {
             return println!("{}", self);
         }
 
@@ -46,7 +45,7 @@ impl<'a> SearchResult<'a> {
             t.fg(term::color::WHITE).unwrap();
             write!(t, "{}", sep).unwrap();
 
-            sep = &self.args.header_seperator;
+            sep = &args.header_seperator;
 
             t.fg(term::color::BLUE).unwrap();
             write!(t, "{}", header).unwrap();
@@ -65,7 +64,7 @@ impl<'a> SearchResult<'a> {
 }
 
 /// Format SearchResult to print it out into
-impl fmt::Display for SearchResult<'_> {
+impl fmt::Display for SearchResult {
     #[allow(unused_must_use)]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let file_and_line_sep: char = if self.args.null {
@@ -74,11 +73,13 @@ impl fmt::Display for SearchResult<'_> {
             ':'
         };
         write!(f, "{}{}{}", &self.file_path, file_and_line_sep, &self.line);
-        if !self.args.no_headers {
-            let headers = self.headers.join(&self.args.header_seperator);
+        // TODO handle following
+        // if !self.args.no_headers {
+            let headers = self.headers.join(" / ");
+            // let headers = self.headers.join(&self.args.header_seperator);
 
             write!(f, ":{}", headers);
-        }
+        //}
         write!(f, ":{}", &self.content)
     }
 }

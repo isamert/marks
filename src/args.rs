@@ -4,7 +4,7 @@ use structopt::StructOpt;
 
 use crate::{org::{datetime::{OrgDatePlan, OrgDateTime}, header::{OrgPriority, OrgTodo}}, parsers, query::Query};
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, StructOpt, Eq, PartialEq)]
 #[structopt(name = "marks")]
 /// A search-engine like search tool for markdown and org-mode files.
 pub struct Args {
@@ -43,6 +43,7 @@ pub struct Args {
     #[structopt(long, parse(try_from_str = parse_todos))]
     pub todo: Vec<OrgTodo>,
 
+    /// TODO Should probably treat headers without priorities as middle priority
     /// List of priorities. Note that items without priorites will not match if you use this option.
     #[structopt(long, parse(try_from_str = parse_priority))]
     pub priority: Vec<OrgPriority>,

@@ -26,7 +26,7 @@ fn main(args: Args) -> Result<(), io::Error> {
     results
         .iter()
         .take(count.unwrap_or(usize::MAX))
-        .for_each(|result| result.print());
+        .for_each(|result| result.print(&args));
 
     Ok(())
 }

@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use crate::args::Args;
 use crate::org::datetime::OrgDateTime;
 
 #[derive(Debug, Eq, PartialEq)]
@@ -25,12 +24,8 @@ pub enum OrgTodo {
     Other(String),
 }
 
-#[derive(Debug)]
-pub struct OrgHeader<'a> {
-    /// Args
-    pub args: &'a Args,
-    /// On which line is the header found.
-    pub line: usize,
+#[derive(Debug, Eq, PartialEq)]
+pub struct OrgHeader {
     /// This usually means the count of # (for md) or * (for org) at the beginning of the header line.
     pub depth: usize,
     /// The header itself, stripped from tags or other annotations.
