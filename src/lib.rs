@@ -9,3 +9,4 @@ pub mod utils;
 pub mod result;
 pub mod args;
 pub mod marks;
+pub mod searcher;

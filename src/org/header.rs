@@ -42,6 +42,21 @@ pub struct OrgHeader {
     pub priority: Option<OrgPriority>,
 }
 
+impl Default for OrgHeader {
+    fn default() -> Self {
+        OrgHeader {
+            depth: 0,
+            content: String::new(),
+            tags: vec![],
+            properties: HashMap::new(),
+            datetime: None,
+            todo: None,
+            priority: None,
+        }
+    }
+}
+
+
 #[test]
 fn test_priority_ordering() {
     assert!(OrgPriority("A".into()) > OrgPriority("B".into()));

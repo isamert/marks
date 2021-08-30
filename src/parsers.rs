@@ -1,20 +1,23 @@
 use std::{collections::HashMap, iter::Peekable};
 
 use chrono::prelude::*;
-use combine::{error::ParseError, parser::{range::take_while, repeat::take_until}};
 use combine::parser::char::*;
 use combine::Stream;
 use combine::*;
+use combine::{
+    error::ParseError,
+    parser::{range::take_while, repeat::take_until},
+};
 use indoc::indoc;
 
-use crate::{marks::DocType, org::datetime::{OrgDatePlan, OrgDateTime}, result::SearchResult};
 use crate::org::header::*;
+use crate::org::datetime::{OrgDatePlan, OrgDateTime};
 
 
 pub fn blanks<Input>() -> impl Parser<Input, Output = ()>
 where
     Input: Stream<Token = char>,
-    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>, {
+{
     many(char(' ')).map(|_: String| ())
 }
 
@@ -22,7 +25,6 @@ where
 pub fn hour<Input>() -> impl Parser<Input, Output = (u32, u32)>
 where
     Input: Stream<Token = char>,
-    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
     (
         count_min_max(2, 2, digit()).map(|x: String| x.parse::<u32>().unwrap()),
@@ -36,17 +38,15 @@ where
 pub fn hour_range<Input>() -> impl Parser<Input, Output = ((u32, u32), Option<(u32, u32)>)>
 where
     Input: Stream<Token = char>,
-    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
     (hour(), optional(token('-').and(hour()))).map(|(x, y)| (x, y.map(|(_, a)| a)))
 }
 
-
 /// Parse `HH:MM-HH:MM`. Second part is optional.
-pub fn date_time_range<Input>() -> impl Parser<Input, Output = (DateTime<Utc>, Option<DateTime<Utc>>)>
+pub fn date_time_range<Input>(
+) -> impl Parser<Input, Output = (DateTime<Utc>, Option<DateTime<Utc>>)>
 where
     Input: Stream<Token = char>,
-    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
     (
         count(4, digit()).map(|x: String| x.parse::<i32>().unwrap()),
@@ -58,16 +58,19 @@ where
         optional(count(3, letter()).map(|x: String| x)),
         blanks().silent(),
         optional(hour_range()).map(|hour| hour.unwrap_or(((0, 0), None))),
-    ).map(|(year, _, month, _, day, _, _, _, hour)| (
-        Utc.ymd(year, month, day).and_hms(hour.0 .0, hour.0 .1, 0),
-        hour.1.map(|end| Utc.ymd(year, month, day).and_hms(end.0, end.1, 0))
-    ))
+    )
+        .map(|(year, _, month, _, day, _, _, _, hour)| {
+            (
+                Utc.ymd(year, month, day).and_hms(hour.0 .0, hour.0 .1, 0),
+                hour.1
+                    .map(|end| Utc.ymd(year, month, day).and_hms(end.0, end.1, 0)),
+            )
+        })
 }
 
 pub fn org_date_time<Input>() -> impl Parser<Input, Output = OrgDateTime>
 where
     Input: Stream<Token = char>,
-    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
     let invertal_parser = many1(satisfy(|x| x != '>' && x != ']'));
 
@@ -84,31 +87,27 @@ where
         optional(invertal_parser),
         choice((token(']'), token('>'))),
     )
-        .map(|(date_plan, _, is_active, (date_start, date_end), _, invertal, _,)| OrgDateTime {
-            is_active,
-            date_plan,
-            date_start,
-            date_end,
-            invertal,
-        })
+        .map(
+            |(date_plan, _, is_active, (date_start, date_end), _, invertal, _)| OrgDateTime {
+                is_active,
+                date_plan,
+                date_start,
+                date_end,
+                invertal,
+            },
+        )
 }
 
 pub fn org_tags<Input>() -> impl Parser<Input, Output = Vec<String>>
 where
     Input: Stream<Token = char>,
-    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
-    (
-        token(':'),
-        sep_end_by1(many1(alpha_num()), token(':')),
-    )
-        .map(|(_, tags)| tags)
+    (token(':'), sep_end_by1(many1(alpha_num()), token(':'))).map(|(_, tags)| tags)
 }
 
 pub fn org_todo<Input>() -> impl Parser<Input, Output = (Option<OrgTodo>, Option<OrgPriority>)>
 where
     Input: Stream<Token = char>,
-    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
     let org_priority = (token('['), token('#'), many(alpha_num()), token(']'))
         .map(|(_, _, priority, _)| OrgPriority(priority));
@@ -132,7 +131,6 @@ where
 pub fn org_title<Input>() -> impl Parser<Input, Output = String>
 where
     Input: Stream<Token = char>,
-    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
     // FIXME This is not right, it can't parse titles with colon in them
     many1(none_of("\n:".chars())).map(|it: String| it.trim().into())
@@ -141,7 +139,6 @@ where
 pub fn org_property<Input>() -> impl Parser<Input, Output = (String, String)>
 where
     Input: Stream<Token = char>,
-    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
     let non_colon = none_of("\n:".chars());
     (
@@ -155,12 +152,11 @@ where
 pub fn org_properties<Input>() -> impl Parser<Input, Output = HashMap<String, String>>
 where
     Input: Stream<Token = char>,
-    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
     (
         string(":PROPERTIES:\n"),
         sep_end_by(attempt(org_property()), newline()),
-        string(":END:")
+        string(":END:"),
     )
         .map(|(_, props, _)| props)
 }
@@ -168,15 +164,40 @@ where
 pub fn org_header_prefix<Input>() -> impl Parser<Input, Output = usize>
 where
     Input: Stream<Token = char>,
-    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>, {
-    many1(char('*')).and(char(' ')).map(|(it, _): (String, _)| it.len())
+{
+    many1(char('*'))
+        .and(char(' '))
+        .map(|(it, _): (String, _)| it.len())
+}
+
+pub fn org_header_single<Input>() -> impl Parser<Input, Output = OrgHeader>
+where
+    Input: Stream<Token = char>,
+{
+    (
+        org_header_prefix(),
+        blanks(),
+        org_todo(),
+        org_title(),
+        blanks(),
+        optional(org_tags()).map(|x| x.unwrap_or(vec![])),
+    )
+        .map(|(depth, _, (todo, priority), content, _, tags)|
+             OrgHeader {
+                 depth,
+                 content,
+                 tags,
+                 todo,
+                 priority,
+                 ..Default::default()
+             },
+        )
 }
 
 pub fn org_header<Input>() -> impl Parser<Input, Output = OrgHeader>
 where
     Input: Stream<Token = char>,
-    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>, {
-
+{
     (
         org_header_prefix(),
         blanks(),
@@ -185,69 +206,57 @@ where
         blanks(),
         optional(org_tags()).map(|x| x.unwrap_or(vec![])),
         optional(attempt(newline().and(org_date_time()).map(|it| it.1))),
-        optional(attempt(newline().and(org_properties())).map(|it| it.1)).map(|it| it.unwrap_or(HashMap::new()))
-    ).map(|(depth, _, (todo, priority), content, _, tags, datetime, properties)|
-          OrgHeader {
-              depth,
-              content,
-              properties,
-              tags,
-              datetime,
-              todo,
-              priority,
-          })
+        optional(attempt(newline().and(org_properties())).map(|it| it.1))
+            .map(|it| it.unwrap_or(HashMap::new())),
+    )
+        .map(|(depth, _, (todo, priority), content, _, tags, datetime, properties)|
+             OrgHeader {
+                 depth,
+                 content,
+                 properties,
+                 tags,
+                 datetime,
+                 todo,
+                 priority,
+             },
+        )
 }
 
 pub fn org_section<Input>() -> impl Parser<Input, Output = Vec<(OrgHeader, Vec<String>)>>
 where
     Input: Stream<Token = char>,
-    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>, {
-
+{
     let new_header = attempt(newline().and(attempt(org_header_prefix())).map(|_| ()));
 
     many1(
         (
             org_header(),
-            take_until(new_header.or(eof())).map(|it: String| it.split("\n").map(|it| it.to_string()).collect()),
+            take_until(new_header.or(eof()))
+                .map(|it: String| it.split("\n").map(|it| it.to_string()).collect()),
             newline().map(|_| ()).or(eof()),
-        ).map(|(x, y, _)| (x,y))
+        )
+            .map(|(x, y, _)| (x, y)),
     )
 }
-
 
 #[test]
 fn test_org_tags() {
     assert_eq!(
-        org_tags()
-            .parse(":test:tag:tag3:")
-            .unwrap(),
-        (
-            vec!["test".into(), "tag".into(), "tag3".into()],
-            ""
-        )
+        org_tags().parse(":test:tag:tag3:").unwrap(),
+        (vec!["test".into(), "tag".into(), "tag3".into()], "")
     )
 }
 
 #[test]
 fn test_org_property() {
     assert_eq!(
-        org_property()
-            .parse(":TEST: value")
-            .unwrap(),
-        (
-            ("TEST".into(), "value".into()),
-            ""
-        )
+        org_property().parse(":TEST: value").unwrap(),
+        (("TEST".into(), "value".into()), "")
     );
 
     assert_eq!(
-        org_property()
-            .parse(":another:   value  ")
-            .unwrap(),
-        (
-            ("another".into(), "value".into()),
-            ""
-        )
+        org_property().parse(":another:   value  ").unwrap(),
+        (("another".into(), "value".into()), "")
     );
 }
 
@@ -258,8 +267,13 @@ fn test_org_properties() {
             .easy_parse(":PROPERTIES:\n:TEST: value\n:TEST2: another value\n:END:")
             .unwrap(),
         (
-            [("TEST".into(), "value".into()),
-             ("TEST2".into(), "another value".into())].iter().cloned().collect(),
+            [
+                ("TEST".into(), "value".into()),
+                ("TEST2".into(), "another value".into())
+            ]
+            .iter()
+            .cloned()
+            .collect(),
             ""
         )
     );
@@ -269,19 +283,17 @@ fn test_org_properties() {
             .easy_parse(":PROPERTIES:\n:RATING: 10/10\n:END:")
             .unwrap(),
         (
-            [("RATING".into(), "10/10".into())].iter().cloned().collect(),
+            [("RATING".into(), "10/10".into())]
+                .iter()
+                .cloned()
+                .collect(),
             ""
         )
     );
 
     assert_eq!(
-        org_properties()
-            .easy_parse(":PROPERTIES:\n:END:")
-            .unwrap(),
-        (
-            HashMap::new(),
-            ""
-        )
+        org_properties().easy_parse(":PROPERTIES:\n:END:").unwrap(),
+        (HashMap::new(), "")
     );
 }
 
@@ -303,7 +315,10 @@ fn test_org_todo() {
     assert_eq!(
         org_todo().parse("PROG [#33] hehe").unwrap(),
         (
-            (Some(OrgTodo::Other("PROG".into())), Some(OrgPriority("33".into()))),
+            (
+                Some(OrgTodo::Other("PROG".into())),
+                Some(OrgPriority("33".into()))
+            ),
             "hehe"
         )
     );
@@ -312,7 +327,10 @@ fn test_org_todo() {
 #[test]
 fn test_org_header() {
     assert_eq!(
-        org_header().easy_parse("** TODO [#B] The Ego and Its Own").unwrap().0,
+        org_header()
+            .easy_parse("** TODO [#B] The Ego and Its Own")
+            .unwrap()
+            .0,
         OrgHeader {
             depth: 2,
             content: "The Ego and Its Own".into(),
@@ -360,7 +378,10 @@ fn test_org_header() {
             depth: 2,
             content: "The Ego and Its Own".into(),
             tags: vec!["test".into(), "tags".into()],
-            properties: [("RATING".into(), "10/10".into())].iter().cloned().collect(),
+            properties: [("RATING".into(), "10/10".into())]
+                .iter()
+                .cloned()
+                .collect(),
             datetime: Some(OrgDateTime {
                 date_start: Utc.ymd(2021, 8, 28).and_hms(0, 0, 0),
                 date_plan: OrgDatePlan::Deadline,
@@ -384,7 +405,10 @@ fn test_org_header() {
             depth: 2,
             content: "The Ego and Its Own".into(),
             tags: vec!["test".into(), "tags".into()],
-            properties: [("RATING".into(), "10/10".into())].iter().cloned().collect(),
+            properties: [("RATING".into(), "10/10".into())]
+                .iter()
+                .cloned()
+                .collect(),
             datetime: None,
             todo: None,
             priority: Some(OrgPriority("B".into())),
@@ -404,7 +428,10 @@ fn test_org_header() {
             depth: 2,
             content: "The Ego and Its Own".into(),
             tags: vec![],
-            properties: [("RATING".into(), "10/10".into())].iter().cloned().collect(),
+            properties: [("RATING".into(), "10/10".into())]
+                .iter()
+                .cloned()
+                .collect(),
             datetime: None,
             todo: None,
             priority: None,
@@ -433,7 +460,8 @@ fn test_org_header() {
 #[test]
 fn test_org_section() {
     assert_eq!(
-        org_section().easy_parse(indoc! {"
+        org_section()
+            .easy_parse(indoc! {"
           * TODO [#B] Hey
           :PROPERTIES:
           :RATING: I'm getting bored
@@ -448,7 +476,8 @@ fn test_org_section() {
           :RATING: I r8 8/8
           :END:
           Hell
-        "}).unwrap(),
+        "})
+            .unwrap(),
         (
             vec![
                 (
@@ -456,7 +485,10 @@ fn test_org_section() {
                         depth: 1,
                         content: "Hey".into(),
                         tags: vec![],
-                        properties: [("RATING".into(), "I'm getting bored".into())].iter().cloned().collect(),
+                        properties: [("RATING".into(), "I'm getting bored".into())]
+                            .iter()
+                            .cloned()
+                            .collect(),
                         datetime: None,
                         todo: Some(OrgTodo::TODO),
                         priority: Some(OrgPriority("B".into())),
@@ -480,7 +512,10 @@ fn test_org_section() {
                         depth: 1,
                         content: "SA".into(),
                         tags: vec!["test1".into(), "test2".into()],
-                        properties: [("RATING".into(), "I r8 8/8".into())].iter().cloned().collect(),
+                        properties: [("RATING".into(), "I r8 8/8".into())]
+                            .iter()
+                            .cloned()
+                            .collect(),
                         datetime: None,
                         todo: None,
                         priority: None,
