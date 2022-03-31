@@ -104,6 +104,10 @@ pub struct Args {
     #[structopt(long)]
     pub no_color: bool,
 
+    /// Print a null byte after file name.
+    #[structopt(long)]
+    pub null: bool,
+
     /// Don't include headers to output.
     #[structopt(long)]
     pub no_headers: bool,

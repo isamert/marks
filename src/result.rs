@@ -28,8 +28,12 @@ impl<'a> SearchResult<'a> {
         t.fg(term::color::MAGENTA).unwrap();
         write!(t, "{}", self.file_path).unwrap();
 
-        t.fg(term::color::WHITE).unwrap();
-        write!(t, ":").unwrap();
+        if self.args.null {
+            write!(t, "\0").unwrap();
+        } else {
+            t.fg(term::color::WHITE).unwrap();
+            write!(t, ":").unwrap();
+        };
 
         t.fg(term::color::GREEN).unwrap();
         write!(t, "{}", self.line).unwrap();
@@ -64,7 +68,12 @@ impl<'a> SearchResult<'a> {
 impl fmt::Display for SearchResult<'_> {
     #[allow(unused_must_use)]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}:{}", &self.file_path, &self.line);
+        let file_and_line_sep: char = if self.args.null {
+            '\0'
+        } else {
+            ':'
+        };
+        write!(f, "{}{}{}", &self.file_path, file_and_line_sep, &self.line);
         if !self.args.no_headers {
             let headers = self.headers.join(&self.args.header_seperator);
 
