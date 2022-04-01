@@ -19,15 +19,29 @@ pub struct SearchResult {
 impl SearchResult {
     #[allow(unused_must_use)]
     pub fn print(&self, args: &Args) {
+        let mut t = term::stdout().unwrap();
+
         if args.no_color {
-            return println!("{}", self);
+            let file_and_line_sep: char = if args.null {
+                '\0'
+            } else {
+                ':'
+            };
+            write!(t, "{}{}{}", &self.file_path, file_and_line_sep, &self.line);
+            if !args.no_headers {
+                let headers = self.headers.join(&args.header_seperator);
+                write!(t, ":{}", headers);
+            }
+            write!(t, ":{}", &self.content);
+
+            writeln!(t);
+            return;
         }
 
-        let mut t = term::stdout().unwrap();
         t.fg(term::color::MAGENTA).unwrap();
         write!(t, "{}", self.file_path).unwrap();
 
-        if self.args.null {
+        if args.null {
             write!(t, "\0").unwrap();
         } else {
             t.fg(term::color::WHITE).unwrap();
@@ -60,26 +74,5 @@ impl SearchResult {
         write!(t, "{}", self.content).unwrap();
 
         writeln!(t);
-    }
-}
-
-/// Format SearchResult to print it out into
-impl fmt::Display for SearchResult {
-    #[allow(unused_must_use)]
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let file_and_line_sep: char = if self.args.null {
-            '\0'
-        } else {
-            ':'
-        };
-        write!(f, "{}{}{}", &self.file_path, file_and_line_sep, &self.line);
-        // TODO handle following
-        // if !self.args.no_headers {
-            let headers = self.headers.join(" / ");
-            // let headers = self.headers.join(&self.args.header_seperator);
-
-            write!(f, ":{}", headers);
-        //}
-        write!(f, ":{}", &self.content)
     }
 }
