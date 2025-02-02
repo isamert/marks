@@ -28,7 +28,7 @@ pub enum DocType {
 }
 
 impl<'a> Marks<'a> {
-    pub fn new(args: &'a Args) -> Marks {
+    pub fn new(args: &'a Args) -> Marks<'a> {
         // TODO: parametrize this
         let matcher = SkimMatcherV2::default();
 

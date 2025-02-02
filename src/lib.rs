@@ -1,6 +1,3 @@
-#[macro_use]
-extern crate lazy_static;
-
 pub mod org;
 pub mod extensions;
 pub mod parsers;

@@ -1,11 +1,12 @@
 use rayon::prelude::*;
+use structopt::StructOpt;
 use std::io;
 
 use marks::args::Args;
 use marks::marks::Marks; // TODO: what
 
-#[paw::main]
-fn main(args: Args) -> Result<(), io::Error> {
+fn main() -> Result<(), io::Error> {
+    let args = Args::from_args();
     let count = args.count;
     let debug = args.debug;
     let app = Marks::new(&args);
