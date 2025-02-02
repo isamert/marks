@@ -12,29 +12,6 @@ pub struct Args {
     #[structopt(short, long)]
     pub debug: bool,
 
-    // TODO: newlines for the help string?
-    /// The query.
-    ///
-    /// An example query may look like this:
-    ///
-    ///    '"this" is a `(test|trial)` query -badword'
-    ///
-    /// This query requires
-    ///
-    ///   - the word "this" to be either in the title hierarchy or in the line.
-    ///
-    ///   - regex "(test|trial)" to either in the title hierarchy or in the line.
-    ///
-    ///   - "badword" to be not in the title hierarchy or the line itself.
-    ///
-    /// Rest of the characters are matched in fuzzy fashion.
-    #[structopt(short, long, parse(try_from_str = parse_query))]
-    pub query: Query,
-
-    /// Where to search for.
-    #[structopt(short, long, env = "PWD", parse(try_from_str = parse_path))]
-    pub path: PathBuf,
-
     /// How many results do you want?
     #[structopt(short, long)]
     pub count: Option<usize>,
@@ -119,6 +96,26 @@ pub struct Args {
     /// List folder names to blacklist
     #[structopt(long)]
     pub blacklist_folder: Vec<String>,
+
+    /// The query.
+    ///
+    /// An example query may look like this:
+    ///
+    ///    '"this" is a `(test|trial)` query -badword'
+    ///
+    /// This query requires
+    ///
+    ///   - the word "this" to be either in the title hierarchy or in the line.
+    ///   - regex "(test|trial)" to either in the title hierarchy or in the line.
+    ///   - "badword" to be not in the title hierarchy or the line itself.
+    ///
+    /// Rest of the characters are matched in fuzzy fashion.
+    #[structopt(parse(try_from_str = parse_query), required=true, verbatim_doc_comment)]
+    pub query: Query,
+
+    /// Where to search for.
+    #[structopt(env = "PWD", parse(try_from_str = parse_path))]
+    pub path: PathBuf,
 }
 
 fn parse_props<'a>(s: &'a str) -> Result<(String, String), String> {

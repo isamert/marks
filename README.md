@@ -31,7 +31,7 @@ This will install `marks` binary under `~/.cargo/bin`.
 `marks` is pretty intuitive, it's similar to Google. Observe the following query:
 
 ```
-marks --path . --query 'marks can "search" `(org|markdown)` files -folders'
+marks 'marks can "search" `(org|markdown)` files -folders'
 ```
 
 This query requires
