@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use rayon::prelude::*;
 use structopt::StructOpt;
 use std::io;
@@ -7,11 +8,9 @@ use marks::marks::Marks; // TODO: what
 
 fn main() -> Result<(), io::Error> {
     let args = Args::from_args();
-    let count = args.count;
-    let debug = args.debug;
     let app = Marks::new(&args);
 
-    if debug {
+    if args.debug {
         println!("{:#?}", app.args);
     }
 
@@ -24,10 +23,24 @@ fn main() -> Result<(), io::Error> {
         .collect::<Vec<_>>();
 
     results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
-    results
-        .iter()
-        .take(count.unwrap_or(usize::MAX))
-        .for_each(|result| result.print());
+
+    let mut iter: Box<dyn Iterator<Item = _>> = Box::new(results.iter_mut());
+
+    if args.only_headers {
+        iter = Box::new(
+            iter
+                .unique_by(|x| format!("{}:{}", x.file_path, x.headers.last().map_or(0, |x| x.line)))
+                .map(|x| { x.is_header = true; x })
+        );
+    }
+
+    if let Some(count) = args.count {
+        iter = Box::new(
+            iter.take(count)
+        );
+    }
+
+    iter.for_each(|x| x.print());
 
     Ok(())
 }

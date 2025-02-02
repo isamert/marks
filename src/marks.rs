@@ -216,9 +216,10 @@ impl<'a> Marks<'a> {
                     line: index + 1,
                     file_path: file.path().to_str()?.to_string(),
                     score: points.iter().sum::<i64>(),
-                    headers: headers.iter().map(|x| x.content.to_string()).collect(),
+                    headers: headers.clone(),
                     content: line,
                     args: self.args,
+                    is_header,
                 });
             }
         }

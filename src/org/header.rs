@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::args::Args;
 use crate::org::datetime::OrgDateTime;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct OrgPriority(pub String);
 
 impl PartialOrd for OrgPriority {
@@ -18,14 +18,14 @@ impl PartialOrd for OrgPriority {
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone, Hash)]
 pub enum OrgTodo {
     TODO,
     DONE,
     Other(String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OrgHeader<'a> {
     /// Args
     pub args: &'a Args,
