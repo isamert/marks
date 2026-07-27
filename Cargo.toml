@@ -1,6 +1,6 @@
 [package]
 name = "marks"
-version = "0.1.0"
+version = "0.5.0"
 authors = ["Isa Mert Gurbuz <isamert@protonmail.com>"]
 description = "A simple and /hopefully/ fast semantic search tool for org/markdown files. WIP."
 edition = "2021"
